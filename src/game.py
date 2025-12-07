@@ -1,6 +1,18 @@
 from typing import List, Optional
 from src.patterns import DeckFacade, Card, GameSubject, IObserver, INITIAL_HAND_SIZE
 
+# Novas classes de erro
+class GameError(Exception):
+    """Classe base para erros de lógica do jogo"""
+    pass
+
+class InvalidMoveError(GameError):
+    pass
+
+class NotYourTurnError(GameError):
+    pass
+
+
 class Game(GameSubject):
     def __init__(self, num_players: int, observer: Optional[IObserver] = None):
         super().__init__()
@@ -23,11 +35,17 @@ class Game(GameSubject):
                 self.players_hands[player_idx].append(self.deck_manager.draw_card())
         self.deck_manager.get_top_card()
 
-    # Novo método: Encapsula o acesso à mão do jogador
     def get_player_hand(self, player_id: int) -> List[Card]:
         if not 0 <= player_id < self.num_players:
-            raise Exception("Jogador inexistente")
+            raise ValueError("Jogador inexistente")
         return self.players_hands[player_id]
+
+    # Helper privado para validar o turno e reduzir repetição de código
+    def _validate_turn(self, player_id: int):
+        if self.winner is not None:
+             raise GameError(f"O jogo já acabou. Vencedor: {self.winner}")
+        if player_id != self.current_player_id:
+            raise NotYourTurnError("Não é sua vez")
 
     def is_move_valid(self, card_to_play: Card) -> bool:
         top_card = self.deck_manager.get_top_card()
@@ -37,24 +55,20 @@ class Game(GameSubject):
     def next_turn(self):
         self.current_player_id = (self.current_player_id + 1) % self.num_players
 
-    # Lógica: O jogo se protege de jogadas inválidas agora
     def play_card(self, player_id: int, card_idx: int) -> str:
-        if self.winner is not None:
-             raise Exception("O jogo já acabou")
+        # Usa o validador com erro específico
+        self._validate_turn(player_id)
         
-        if player_id != self.current_player_id:
-            raise Exception("Não é sua vez")
-            
         hand = self.players_hands[player_id]
         if not 0 <= card_idx < len(hand):
-            raise Exception("Índice inválido")
+            raise IndexError("Índice de carta inválido")
 
         card = hand[card_idx]
         
         if not self.is_move_valid(card):
-            raise Exception("Jogada inválida")
+            # Erro específico de regra de jogo
+            raise InvalidMoveError("Jogada inválida: cor ou valor não coincidem")
 
-        # Se passou por tudo, executa a jogada
         self.players_hands[player_id].pop(card_idx)
         self.deck_manager.add_to_discard(card)
         
@@ -67,9 +81,8 @@ class Game(GameSubject):
         return msg
 
     def draw_and_pass(self, player_id: int) -> Card:
-        if player_id != self.current_player_id:
-            raise Exception("Não é sua vez")
-            
+        self._validate_turn(player_id)
+        
         new_card = self.deck_manager.draw_card()
         self.players_hands[player_id].append(new_card)
         self.next_turn()

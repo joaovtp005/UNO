@@ -1,9 +1,10 @@
 from typing import Dict
 from fastapi import FastAPI, HTTPException
-from src.game import Game
+# Importamos as exceções personalizadas
+from src.game import Game, GameError, InvalidMoveError, NotYourTurnError
 from src.patterns import MatchCounterObserver
 
-app = FastAPI(title="UNO Básico", description="UNO simplificado")
+app = FastAPI(title="UNO Básico Refatorado", description="UNO simplificado")
 
 games_db: Dict[int, Game] = {}
 next_game_id = 0
@@ -38,27 +39,27 @@ async def ver_cartas(id_jogo: int, id_jogador: int):
     if id_jogo not in games_db:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
     try:
-        # AGORA USAMOS O MÉTODO ENCAPSULADO
         return {"hand": games_db[id_jogo].get_player_hand(id_jogador)}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Jogador inválido")
 
 @app.put("/jogo/{id_jogo}/jogar")
 async def jogar_carta(id_jogo: int, id_jogador: int, id_carta: int):
     if id_jogo not in games_db:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
-    
     game = games_db[id_jogo]
     try:
-        # DELEGAMOS A LÓGICA PARA O JOGO
         msg = game.play_card(id_jogador, id_carta)
         return {
             "message": "Jogada realizada", 
             "action_result": msg, 
             "next_player": game.current_player_id
         }
-    except Exception as e:
-        # Capturamos qualquer erro que o jogo lançar
+    # Captura erros específicos 
+    except (InvalidMoveError, NotYourTurnError, IndexError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    # Captura qualquer outro erro de jogo
+    except GameError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.put("/jogo/{id_jogo}/passa")
@@ -72,5 +73,5 @@ async def passar_a_vez(id_jogo: int, id_jogador: int):
             "new_card": new_card, 
             "next_player": games_db[id_jogo].current_player_id
         }
-    except Exception as e:
-         raise HTTPException(status_code=400, detail=str(e))
+    except NotYourTurnError as e:
+        raise HTTPException(status_code=400, detail=str(e))
