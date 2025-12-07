@@ -1,11 +1,21 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List
+from enum import Enum
 import random
+
+# Constante para evitar Magic Number
+INITIAL_HAND_SIZE = 5
+
+class Color(str, Enum):
+    RED = "Red"
+    GREEN = "Green"
+    BLUE = "Blue"
+    YELLOW = "Yellow"
 
 @dataclass
 class Card:
-    color: str
+    color: Color
     value: str
     action_strategy: 'ICardStrategy'
 
@@ -21,7 +31,7 @@ class NumberCardStrategy(ICardStrategy):
 
 class CardFactory:
     @staticmethod
-    def create_card(color: str, value: str) -> Card:
+    def create_card(color: Color, value: str) -> Card:
         strategy = NumberCardStrategy()
         return Card(color=color, value=value, action_strategy=strategy)
 
@@ -32,10 +42,9 @@ class DeckFacade:
         self._initialize_deck()
 
     def _initialize_deck(self):
-        colors = ["Red", "Green", "Blue", "Yellow"]
         values = [str(i) for i in range(10)]
         self._deck = []
-        for color in colors:
+        for color in Color:
             self._deck.append(CardFactory.create_card(color, "0"))
             for v in values[1:]:
                 self._deck.append(CardFactory.create_card(color, v))
@@ -54,7 +63,6 @@ class DeckFacade:
             self._discard_pile = []
             self.shuffle()
             self._discard_pile.append(top_card)
-        
         return self._deck.pop()
 
     def add_to_discard(self, card: Card):
@@ -78,6 +86,7 @@ class MatchCounterObserver(IObserver):
         if event_type == "NEW_GAME":
             self.match_count += 1
 
+# Mantemos o global AINDA, vamos remover no próximo passo
 match_stats = MatchCounterObserver()
 
 class GameSubject:
