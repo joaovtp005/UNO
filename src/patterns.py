@@ -86,9 +86,6 @@ class MatchCounterObserver(IObserver):
         if event_type == "NEW_GAME":
             self.match_count += 1
 
-# Mantemos o global AINDA, vamos remover no próximo passo
-match_stats = MatchCounterObserver()
-
 class GameSubject:
     def __init__(self):
         self._observers: List[IObserver] = []

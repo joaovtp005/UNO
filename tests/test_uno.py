@@ -26,6 +26,16 @@ def test_strategy_execution():
     assert game.current_player_id != initial_player
     assert msg == "Turno passado para o próximo jogador."
 
+def test_observer_match_count_isolated():
+    # Teste isolado: cria observer localmente
+    stats1 = MatchCounterObserver()
+    
+    # Injeta no jogo
+    _ = Game(num_players=2, observer=stats1)
+    
+    # Verifica se contou apenas nesta instância
+    assert stats1.match_count == 1
+
 def test_game_initialization():
     game = Game(num_players=3)
     # Uso da constante

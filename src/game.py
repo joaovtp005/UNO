@@ -1,10 +1,12 @@
 from typing import List, Optional
-from src.patterns import DeckFacade, Card, GameSubject, match_stats
+from src.patterns import DeckFacade, Card, GameSubject, IObserver, INITIAL_HAND_SIZE
 
 class Game(GameSubject):
-    def __init__(self, num_players: int):
+    def __init__(self, num_players: int, observer: Optional[IObserver] = None):
         super().__init__()
-        self.attach(match_stats)
+        # Injeção de dependência: só attacha se receber um observer
+        if observer:
+            self.attach(observer)
         
         self.num_players = num_players
         self.current_player_id = 0
@@ -18,7 +20,8 @@ class Game(GameSubject):
         self.notify("NEW_GAME")
 
     def _start_game(self):
-        for _ in range(5):
+        # Usa a constante definida no patterns.py
+        for _ in range(INITIAL_HAND_SIZE):
             for player_idx in range(self.num_players):
                 card = self.deck_manager.draw_card()
                 self.players_hands[player_idx].append(card)

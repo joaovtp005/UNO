@@ -1,15 +1,15 @@
 from typing import Dict
 from fastapi import FastAPI, HTTPException
 from src.game import Game
-from src.patterns import match_stats
+from src.patterns import MatchCounterObserver
 
-app = FastAPI(
-    title="UNO Básico",
-    description="UNO simplificado"
-    )
+app = FastAPI(title="UNO Básico", description="UNO simplificado")
 
 games_db: Dict[int, Game] = {}
 next_game_id = 0
+
+# Instância única gerenciada pelo app (Singleton explícito)
+global_match_stats = MatchCounterObserver()
 
 @app.get("/novoJogo")
 async def novo_jogo(quantidadeJog: int):
@@ -20,14 +20,15 @@ async def novo_jogo(quantidadeJog: int):
     game_id = next_game_id
     next_game_id += 1
     
-    new_game = Game(num_players=quantidadeJog)
+    # Injeta o observer global
+    new_game = Game(num_players=quantidadeJog, observer=global_match_stats)
     games_db[game_id] = new_game
     
     return {"game_id": game_id}
 
 @app.get("/stats/partidas")
 async def estatisticas_partidas():
-    return {"partidas_iniciadas": match_stats.match_count}
+    return {"partidas_iniciadas": global_match_stats.match_count}
 
 @app.get("/jogo/{id_jogo}/jogador_da_vez")
 async def jogador_da_vez(id_jogo: int):
